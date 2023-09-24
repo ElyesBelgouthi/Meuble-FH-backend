@@ -1,3 +1,1 @@
-export class CreateItemDto {
-  pm;
-}
+export class CreateItemDto {}
