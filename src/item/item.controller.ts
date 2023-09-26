@@ -24,6 +24,7 @@ import { CreateColorDto } from './dto/create-color.dto';
 import * as pathLib from 'path';
 import * as fs from 'fs';
 import { UpdateColorDto } from './dto/update-color.dto';
+import { PhotoModel } from './models/photo.model';
 
 @Controller('api/v1')
 export class ItemController {
@@ -41,8 +42,18 @@ export class ItemController {
     @UploadedFiles() photos: Array<Express.Multer.File>,
     @Body() createItemDto: CreateItemDto,
   ) {
-    console.log('Uploaded Photos:', photos);
-    return this.itemService.createItem(createItemDto);
+    const regularPhotos: PhotoModel[] = [];
+    for (const photo of photos) {
+      regularPhotos.push({
+        originalname: photo.originalname,
+        filename: photo.filename,
+      });
+    }
+
+    console.log('photos type', typeof regularPhotos);
+    console.log('photos ', regularPhotos);
+    // console.log('colorsId type', typeof createItemDto.colorIds);
+    return this.itemService.createItem(createItemDto, regularPhotos);
   }
 
   @Post('color')

@@ -17,7 +17,7 @@ export class Color extends BaseEntity {
   @Column({ unique: true })
   name: string;
 
-  @Column({ unique: true, nullable: true })
+  @Column({ unique: true })
   reference: string;
 
   @Column()

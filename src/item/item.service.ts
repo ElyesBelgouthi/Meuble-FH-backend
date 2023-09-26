@@ -10,18 +10,81 @@ import { CreateColorDto } from './dto/create-color.dto';
 import { UpdateColorDto } from './dto/update-color.dto';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Color } from './entities/color.entity';
-import { Repository } from 'typeorm';
+import { Connection, DataSource, Repository } from 'typeorm';
+import ShortUniqueId from 'short-unique-id';
 import * as fs from 'fs';
 import * as pathLib from 'path';
+import { Item } from './entities/item.entity';
+import { Photo } from './entities/photo.entity';
+import { PhotoModel } from './models/photo.model';
 
 @Injectable()
 export class ItemService {
+  private uid = new ShortUniqueId({ length: 8 });
+
   constructor(
     @InjectRepository(Color) private colorRepository: Repository<Color>,
-  ) {}
+    @InjectRepository(Item) private itemRepository: Repository<Item>,
+    private readonly dataSource: DataSource,
+  ) {
+    this.uid.setDictionary('alphanum_upper');
+  }
 
-  createItem(createItemDto: CreateItemDto) {
-    return 'This action adds a new item';
+  async createItem(createItemDto: CreateItemDto, regularPhotos: PhotoModel[]) {
+    const queryRunner = this.dataSource.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
+
+    try {
+      const item: Item = new Item();
+      item.title = createItemDto.title;
+      item.description = createItemDto.description;
+      item.height = createItemDto.height;
+      item.width = createItemDto.width;
+      item.type = createItemDto.type;
+      item.price = createItemDto.price;
+      item.category = createItemDto.category;
+      item.reference =
+        createItemDto.category.slice(0, 2).toUpperCase() + '-' + this.uid.rnd();
+
+      // Fetch colors based on color IDs
+      // const colorIds = createItemDto.colorIds;
+      // const colors: Color[] = await this.colorRepository
+      //   .createQueryBuilder('color')
+      //   .where('color.id IN (:...colorIds)', { colorIds })
+      //   .getMany();
+
+      // if (colors) {
+      //   item.colors = colors;
+      // }
+
+      // Save the item
+      const itemFinal = await queryRunner.manager.save(item);
+      if (Array.isArray(regularPhotos)) {
+        // Create and save item photos
+        const itemPhotos = regularPhotos.map(async (photo: PhotoModel) => {
+          const itemPhoto: Photo = new Photo();
+          itemPhoto.name = photo.originalname;
+          itemPhoto.path = photo.filename;
+          await queryRunner.manager.save(itemPhoto);
+          return itemPhoto;
+        });
+
+        // Wait for all item photos to be saved
+        const savedPhotos = await Promise.all(itemPhotos);
+
+        // Associate saved photos with the item
+        itemFinal.photos = savedPhotos;
+      }
+
+      await queryRunner.commitTransaction();
+      return itemFinal;
+    } catch (error) {
+      await queryRunner.rollbackTransaction();
+      throw error;
+    } finally {
+      await queryRunner.release();
+    }
   }
 
   async createColor(
@@ -31,7 +94,7 @@ export class ItemService {
     try {
       const color: Color = new Color();
       color.name = createColorDto.name;
-      color.reference = createColorDto.reference;
+      color.reference = 'CL-' + this.uid.rnd();
       color.path = path;
       return await color.save();
     } catch (error) {
@@ -63,10 +126,7 @@ export class ItemService {
         throw new NotFoundException('Color not found');
       }
       const existingColor = await this.colorRepository.findOne({
-        where: [
-          { name: updateColorDto.name },
-          { reference: updateColorDto.reference },
-        ],
+        where: [{ name: updateColorDto.name }],
       });
 
       if (existingColor && existingColor.id !== color.id) {
@@ -76,7 +136,6 @@ export class ItemService {
       }
 
       color.name = updateColorDto.name;
-      color.reference = updateColorDto.reference;
 
       if (path) {
         this.deleteFile(color.path, 'images');

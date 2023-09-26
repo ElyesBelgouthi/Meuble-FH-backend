@@ -4,8 +4,4 @@ export class CreateColorDto {
   @IsString()
   @IsNotEmpty()
   name: string;
-
-  @IsString()
-  @IsNotEmpty()
-  reference: string;
 }
