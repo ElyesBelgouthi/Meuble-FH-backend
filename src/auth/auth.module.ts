@@ -12,9 +12,9 @@ import { User } from './entities/user.entity';
     TypeOrmModule.forFeature([User]),
 
     JwtModule.register({
-      secret: 'xxXHorizonDataXxx',
+      secret: 'xxXMeubleFhHatemXxx',
       signOptions: {
-        expiresIn: 3600,
+        expiresIn: 4800,
       },
     }),
 
