@@ -49,6 +49,7 @@ export class Item extends BaseEntity {
 
   @ManyToMany(() => Color, (color) => color.items, {
     onDelete: 'CASCADE',
+    eager: true,
   })
   @JoinTable()
   colors: Color[];

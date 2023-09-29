@@ -12,6 +12,7 @@ import {
   BadRequestException,
   NotFoundException,
   UploadedFiles,
+  Query,
 } from '@nestjs/common';
 import { ItemService } from './item.service';
 import { CreateItemDto } from './dto/create-item.dto';
@@ -42,6 +43,9 @@ export class ItemController {
     @UploadedFiles() photos: Array<Express.Multer.File>,
     @Body() createItemDto: CreateItemDto,
   ) {
+    if (!photos || photos.length === 0) {
+      throw new BadRequestException('Images are missing.');
+    }
     const regularPhotos: PhotoModel[] = [];
     for (const photo of photos) {
       regularPhotos.push({
@@ -50,9 +54,6 @@ export class ItemController {
       });
     }
 
-    console.log('photos type', typeof regularPhotos);
-    console.log('photos ', regularPhotos);
-    // console.log('colorsId type', typeof createItemDto.colorIds);
     return this.itemService.createItem(createItemDto, regularPhotos);
   }
 
@@ -74,6 +75,17 @@ export class ItemController {
    *
    *
    */
+
+  @Get('item')
+  getItems(@Query() params) {
+    return this.itemService.getItems(params);
+  }
+
+  @Get('item/:id')
+  getItemById(@Param('id') id: number) {
+    return this.itemService.getItemById(id);
+  }
+
   @Get('image/:path')
   getImage(@Param('path') path: string, @Res() res: Response) {
     const imagePath = pathLib.join(__dirname, '../../uploads/images', path);
@@ -116,9 +128,22 @@ export class ItemController {
    *
    */
 
-  @Patch(':id')
-  update(@Param('id') id: string, @Body() updateItemDto: UpdateItemDto) {
-    return this.itemService.update(+id, updateItemDto);
+  @Patch('item/:id')
+  @UseInterceptors(FilesInterceptor('photos', 5, saveImageToStorage))
+  async updateItem(
+    @Param('id') id: number,
+    @UploadedFiles() photos: Array<Express.Multer.File>,
+    @Body() updateItemDto: UpdateItemDto,
+  ) {
+    const regularPhotos: PhotoModel[] = [];
+    for (const photo of photos) {
+      regularPhotos.push({
+        originalname: photo.originalname,
+        filename: photo.filename,
+      });
+    }
+
+    return this.itemService.updateItem(id, updateItemDto, regularPhotos);
   }
 
   @Patch('color/:id')
@@ -138,9 +163,9 @@ export class ItemController {
    *
    */
 
-  @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.itemService.remove(+id);
+  @Delete('item/:id')
+  removeItem(@Param('id') id: number) {
+    return this.itemService.removeItem(id);
   }
 
   @Delete('color/:id')

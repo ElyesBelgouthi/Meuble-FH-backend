@@ -27,5 +27,5 @@ export class CreateItemDto {
   price: number;
 
   @IsNotEmpty()
-  colorIds: number[];
+  colorIds: string;
 }

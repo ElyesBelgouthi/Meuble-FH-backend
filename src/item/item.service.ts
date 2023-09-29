@@ -3,6 +3,7 @@ import {
   Injectable,
   NotFoundException,
   InternalServerErrorException,
+  ParamData,
 } from '@nestjs/common';
 import { CreateItemDto } from './dto/create-item.dto';
 import { UpdateItemDto } from './dto/update-item.dto';
@@ -10,7 +11,7 @@ import { CreateColorDto } from './dto/create-color.dto';
 import { UpdateColorDto } from './dto/update-color.dto';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Color } from './entities/color.entity';
-import { Connection, DataSource, Repository } from 'typeorm';
+import { DataSource, Repository } from 'typeorm';
 import ShortUniqueId from 'short-unique-id';
 import * as fs from 'fs';
 import * as pathLib from 'path';
@@ -25,11 +26,19 @@ export class ItemService {
   constructor(
     @InjectRepository(Color) private colorRepository: Repository<Color>,
     @InjectRepository(Item) private itemRepository: Repository<Item>,
+    @InjectRepository(Photo) private photoRepository: Repository<Photo>,
     private readonly dataSource: DataSource,
   ) {
     this.uid.setDictionary('alphanum_upper');
   }
 
+  /*
+   *
+   *
+   * Post requests
+   *
+   *
+   */
   async createItem(createItemDto: CreateItemDto, regularPhotos: PhotoModel[]) {
     const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.connect();
@@ -48,33 +57,27 @@ export class ItemService {
         createItemDto.category.slice(0, 2).toUpperCase() + '-' + this.uid.rnd();
 
       // Fetch colors based on color IDs
-      // const colorIds = createItemDto.colorIds;
-      // const colors: Color[] = await this.colorRepository
-      //   .createQueryBuilder('color')
-      //   .where('color.id IN (:...colorIds)', { colorIds })
-      //   .getMany();
+      const colorIds = JSON.parse(createItemDto.colorIds);
+      const colors: Color[] = await this.colorRepository
+        .createQueryBuilder('color')
+        .where('color.id IN (:...colorIds)', { colorIds })
+        .getMany();
 
-      // if (colors) {
-      //   item.colors = colors;
-      // }
+      if (colors) {
+        item.colors = colors;
+      }
 
       // Save the item
       const itemFinal = await queryRunner.manager.save(item);
       if (Array.isArray(regularPhotos)) {
         // Create and save item photos
-        const itemPhotos = regularPhotos.map(async (photo: PhotoModel) => {
+        for (let photo of regularPhotos) {
           const itemPhoto: Photo = new Photo();
           itemPhoto.name = photo.originalname;
           itemPhoto.path = photo.filename;
+          itemPhoto.item = itemFinal;
           await queryRunner.manager.save(itemPhoto);
-          return itemPhoto;
-        });
-
-        // Wait for all item photos to be saved
-        const savedPhotos = await Promise.all(itemPhotos);
-
-        // Associate saved photos with the item
-        itemFinal.photos = savedPhotos;
+        }
       }
 
       await queryRunner.commitTransaction();
@@ -103,6 +106,40 @@ export class ItemService {
     }
   }
 
+  /*
+   *
+   *
+   * GET requests
+   *
+   *
+   */
+  async getItems(params: any): Promise<Item[]> {
+    const queryBuilder = this.itemRepository.createQueryBuilder('item');
+
+    if (params) {
+      if (params.categories) {
+        const categories = params.categories.split(',');
+        queryBuilder.andWhere('item.category IN (:...categories)', {
+          categories,
+        });
+      }
+
+      if (params.types) {
+        const types = params.types.split(',');
+        queryBuilder.andWhere('item.type IN (:...types)', { types });
+      }
+    }
+    queryBuilder
+      .leftJoinAndSelect('item.photos', 'photo')
+      .leftJoinAndSelect('item.colors', 'colr');
+
+    return await queryBuilder.getMany();
+  }
+
+  async getItemById(id: number): Promise<Item> {
+    return await this.itemRepository.findOneBy({ id });
+  }
+
   async getColorById(id: number): Promise<Color> {
     return await this.colorRepository.findOneBy({ id });
   }
@@ -113,6 +150,76 @@ export class ItemService {
 
   update(id: number, updateItemDto: UpdateItemDto) {
     return `This action updates a #${id} item`;
+  }
+
+  /*
+   *
+   *
+   * Patch requests
+   *
+   *
+   */
+
+  async updateItem(
+    id: number,
+    updateItemDto: UpdateItemDto,
+    photos: PhotoModel[],
+  ) {
+    const queryRunner = this.dataSource.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
+
+    try {
+      const item: Item = await this.itemRepository.findOneBy({ id });
+      if (item) {
+        item.title = updateItemDto.title;
+        item.description = updateItemDto.description;
+        item.height = updateItemDto.height;
+        item.width = updateItemDto.width;
+        item.type = updateItemDto.type;
+        item.price = updateItemDto.price;
+        item.category = updateItemDto.category;
+
+        const colorIds = JSON.parse(updateItemDto.colorIds);
+        const colors: Color[] = await this.colorRepository
+          .createQueryBuilder('color')
+          .where('color.id IN (:...colorIds)', { colorIds })
+          .getMany();
+
+        if (colors) {
+          item.colors = colors;
+        }
+      }
+
+      // Fetch colors based on color IDs
+
+      // Save the item
+      const itemFinal = await queryRunner.manager.save(item);
+      if (Array.isArray(photos) && photos.length > 0) {
+        const oldPhotos: Photo[] = item.photos;
+        if (oldPhotos) {
+          for (let photo of oldPhotos) {
+            await this.removePhoto(photo.id);
+          }
+        }
+        // Create and save item photos
+        for (let photo of photos) {
+          const itemPhoto: Photo = new Photo();
+          itemPhoto.name = photo.originalname;
+          itemPhoto.path = photo.filename;
+          itemPhoto.item = itemFinal;
+          await queryRunner.manager.save(itemPhoto);
+        }
+      }
+
+      await queryRunner.commitTransaction();
+      return itemFinal;
+    } catch (error) {
+      await queryRunner.rollbackTransaction();
+      throw error;
+    } finally {
+      await queryRunner.release();
+    }
   }
 
   async updateColor(
@@ -151,11 +258,28 @@ export class ItemService {
     }
   }
 
-  remove(id: number) {
-    return `This action removes a #${id} item`;
+  /*
+   *
+   *
+   * Delete requests
+   *
+   *
+   */
+
+  async removeItem(id: number): Promise<void> {
+    const item = await this.itemRepository.findOneBy({ id });
+    if (item) {
+      const photos: Photo[] = item.photos;
+      if (photos) {
+        for (let photo of photos) {
+          await this.removePhoto(photo.id);
+        }
+      }
+      await item.remove();
+    }
   }
 
-  async removeColor(id): Promise<void> {
+  async removeColor(id: number): Promise<void> {
     const color = await this.colorRepository.findOneBy({ id });
     if (color) {
       try {
@@ -163,6 +287,18 @@ export class ItemService {
       } catch (error) {
       } finally {
         await color.remove();
+      }
+    }
+  }
+
+  async removePhoto(id: number): Promise<void> {
+    const photo = await this.photoRepository.findOneBy({ id });
+    if (photo) {
+      try {
+        this.deleteFile(photo.path, 'images');
+      } catch (error) {
+      } finally {
+        await photo.remove();
       }
     }
   }
