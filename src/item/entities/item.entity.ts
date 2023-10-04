@@ -38,7 +38,7 @@ export class Item extends BaseEntity {
   @Column()
   width: number;
 
-  @Column({ type: 'decimal', precision: 7, scale: 3 })
+  @Column()
   price: number;
 
   @OneToMany(() => Photo, (photo) => photo.item, {

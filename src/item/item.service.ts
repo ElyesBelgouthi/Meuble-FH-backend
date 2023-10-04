@@ -148,8 +148,8 @@ export class ItemService {
     return await this.colorRepository.find();
   }
 
-  update(id: number, updateItemDto: UpdateItemDto) {
-    return `This action updates a #${id} item`;
+  async getItemPriceById(id: number) {
+    return (await this.getItemById(id)).price;
   }
 
   /*

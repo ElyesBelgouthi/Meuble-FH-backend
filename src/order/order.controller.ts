@@ -24,13 +24,13 @@ export class OrderController {
   }
 
   @Get()
-  findAll() {
-    return this.orderService.findAll();
+  getOrders() {
+    return this.orderService.getOrders();
   }
 
   @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.orderService.findOne(+id);
+  getOrderById(@Param('id') id: number) {
+    return this.orderService.getOrderById(id);
   }
 
   @Patch(':id')
@@ -39,7 +39,7 @@ export class OrderController {
   }
 
   @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.orderService.remove(+id);
+  remove(@Param('id') id: number) {
+    return this.orderService.deleteOrder(id);
   }
 }
