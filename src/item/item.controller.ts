@@ -53,7 +53,6 @@ export class ItemController {
         filename: photo.filename,
       });
     }
-
     return this.itemService.createItem(createItemDto, regularPhotos);
   }
 

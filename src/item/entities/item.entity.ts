@@ -11,6 +11,7 @@ import {
 } from 'typeorm';
 import { Photo } from './photo.entity';
 import { Color } from './color.entity';
+import { Dimension } from './dimension.entity';
 
 @Entity()
 export class Item extends BaseEntity {
@@ -32,20 +33,18 @@ export class Item extends BaseEntity {
   @Column()
   type: string;
 
-  @Column()
-  height: number;
-
-  @Column()
-  width: number;
-
-  @Column()
-  price: number;
-
   @OneToMany(() => Photo, (photo) => photo.item, {
     eager: true,
     cascade: true,
   })
   photos: Photo[];
+
+  @OneToMany(() => Dimension, (dimension) => dimension.item, {
+    eager: true,
+    cascade: true,
+    onDelete: 'CASCADE',
+  })
+  dimensions: Dimension[];
 
   @ManyToMany(() => Color, (color) => color.items, {
     onDelete: 'CASCADE',

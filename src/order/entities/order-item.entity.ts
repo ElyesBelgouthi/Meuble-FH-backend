@@ -22,6 +22,9 @@ export class OrderItem extends BaseEntity {
   colorName: string;
 
   @Column()
+  dimension: string;
+
+  @Column()
   unitPrice: number;
 
   @Column()

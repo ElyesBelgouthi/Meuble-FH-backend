@@ -18,6 +18,7 @@ import * as pathLib from 'path';
 import { Item } from './entities/item.entity';
 import { Photo } from './entities/photo.entity';
 import { PhotoModel } from './models/photo.model';
+import { Dimension } from './entities/dimension.entity';
 
 @Injectable()
 export class ItemService {
@@ -27,6 +28,8 @@ export class ItemService {
     @InjectRepository(Color) private colorRepository: Repository<Color>,
     @InjectRepository(Item) private itemRepository: Repository<Item>,
     @InjectRepository(Photo) private photoRepository: Repository<Photo>,
+    @InjectRepository(Dimension)
+    private dimensionRepository: Repository<Dimension>,
     private readonly dataSource: DataSource,
   ) {
     this.uid.setDictionary('alphanum_upper');
@@ -48,10 +51,7 @@ export class ItemService {
       const item: Item = new Item();
       item.title = createItemDto.title;
       item.description = createItemDto.description;
-      item.height = createItemDto.height;
-      item.width = createItemDto.width;
       item.type = createItemDto.type;
-      item.price = createItemDto.price;
       item.category = createItemDto.category;
       item.reference =
         createItemDto.category.slice(0, 2).toUpperCase() + '-' + this.uid.rnd();
@@ -78,6 +78,18 @@ export class ItemService {
           itemPhoto.item = itemFinal;
           await queryRunner.manager.save(itemPhoto);
         }
+      }
+      const dimensions: Dimension[] = JSON.parse(createItemDto.dimensions);
+      for (let dimension of dimensions) {
+        const itemDimension: Dimension = new Dimension();
+        itemDimension.name = dimension.name;
+        itemDimension.height = dimension.height;
+        itemDimension.width = dimension.width;
+        itemDimension.length = dimension.length;
+
+        itemDimension.price = dimension.price;
+        itemDimension.item = itemFinal;
+        await queryRunner.manager.save(itemDimension);
       }
 
       await queryRunner.commitTransaction();
@@ -131,7 +143,8 @@ export class ItemService {
     }
     queryBuilder
       .leftJoinAndSelect('item.photos', 'photo')
-      .leftJoinAndSelect('item.colors', 'colr');
+      .leftJoinAndSelect('item.colors', 'color')
+      .leftJoinAndSelect('item.dimensions', 'dimension');
 
     return await queryBuilder.getMany();
   }
@@ -146,10 +159,6 @@ export class ItemService {
 
   async getColors(): Promise<Color[]> {
     return await this.colorRepository.find();
-  }
-
-  async getItemPriceById(id: number) {
-    return (await this.getItemById(id)).price;
   }
 
   /*
@@ -174,10 +183,7 @@ export class ItemService {
       if (item) {
         item.title = updateItemDto.title;
         item.description = updateItemDto.description;
-        item.height = updateItemDto.height;
-        item.width = updateItemDto.width;
         item.type = updateItemDto.type;
-        item.price = updateItemDto.price;
         item.category = updateItemDto.category;
 
         const colorIds = JSON.parse(updateItemDto.colorIds);
@@ -210,6 +216,24 @@ export class ItemService {
           itemPhoto.item = itemFinal;
           await queryRunner.manager.save(itemPhoto);
         }
+      }
+      const dimensions: Dimension[] = JSON.parse(updateItemDto.dimensions);
+      const oldDimensions: Dimension[] = itemFinal.dimensions;
+      if (oldDimensions) {
+        for (let dimension of oldDimensions) {
+          await dimension.remove();
+        }
+      }
+      for (let dimension of dimensions) {
+        const itemDimension: Dimension = new Dimension();
+        itemDimension.name = dimension.name;
+        itemDimension.height = dimension.height;
+        itemDimension.width = dimension.width;
+        itemDimension.length = dimension.length;
+
+        itemDimension.price = dimension.price;
+        itemDimension.item = itemFinal;
+        await queryRunner.manager.save(itemDimension);
       }
 
       await queryRunner.commitTransaction();

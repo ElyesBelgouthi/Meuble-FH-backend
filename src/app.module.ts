@@ -18,13 +18,13 @@ import { MailerModule } from '@nestjs-modules/mailer';
       transport: {
         service: 'Gmail',
         auth: {
-          user: 'zappa.mohsen@gmail.com',
-          pass: 'hammia7167416',
+          user: 'meuble.fh.service@gmail.com',
+          pass: 'oqsl ypjk bmfx disc',
         },
       },
 
       defaults: {
-        from: '"Meuble FH" <zappa.mohsen@gmail.com>',
+        from: '"Meuble FH" <meuble.fh.service@gmail.com>',
       },
     }),
   ],

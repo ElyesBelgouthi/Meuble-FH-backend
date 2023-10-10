@@ -17,14 +17,9 @@ export class CreateItemDto {
   @IsNotEmpty()
   type: string;
 
+  @IsString()
   @IsNotEmpty()
-  height: number;
-
-  @IsNotEmpty()
-  width: number;
-
-  @IsNotEmpty()
-  price: number;
+  dimensions: string;
 
   @IsNotEmpty()
   colorIds: string;
