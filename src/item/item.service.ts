@@ -144,7 +144,8 @@ export class ItemService {
     queryBuilder
       .leftJoinAndSelect('item.photos', 'photo')
       .leftJoinAndSelect('item.colors', 'color')
-      .leftJoinAndSelect('item.dimensions', 'dimension');
+      .leftJoinAndSelect('item.dimensions', 'dimension')
+      .orderBy('dimension.price', 'ASC');
 
     return await queryBuilder.getMany();
   }

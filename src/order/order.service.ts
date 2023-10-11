@@ -134,7 +134,7 @@ export class OrderService {
                 <h1>Confirmation de Commande</h1>
               </div>
               <div class="logo">
-                <img src="https://i.imgur.com/xzWDPBI.png" alt="Logo" />
+                <img src="https://i.imgur.com/1asfYy9.png" alt="Logo" />
               </div>
               <div class="message">
                 <h2>Merci ${order.firstName} ${order.lastName},</h2>
