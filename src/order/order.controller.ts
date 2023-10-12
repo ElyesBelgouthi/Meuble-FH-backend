@@ -8,6 +8,7 @@ import {
   Delete,
   UseInterceptors,
   Res,
+  UseGuards,
 } from '@nestjs/common';
 import { OrderService } from './order.service';
 import { CreateOrderDto } from './dto/create-order.dto';
@@ -16,6 +17,7 @@ import { AnyFilesInterceptor } from '@nestjs/platform-express';
 import { PdfService } from './pdf.service';
 import { Response } from 'express';
 import { createReadStream } from 'fs';
+import { AuthGuard } from '@nestjs/passport';
 
 @Controller('api/v1/order')
 export class OrderController {
@@ -31,11 +33,13 @@ export class OrderController {
   }
 
   @Get()
+  @UseGuards(AuthGuard())
   getOrders() {
     return this.orderService.getOrders();
   }
 
   @Get(':id')
+  @UseGuards(AuthGuard())
   getOrderById(@Param('id') id: number) {
     return this.orderService.getOrderById(id);
   }
@@ -72,6 +76,7 @@ export class OrderController {
   }
 
   @Delete(':id')
+  // @UseGuards(AuthGuard())
   remove(@Param('id') id: number) {
     return this.orderService.deleteOrder(id);
   }

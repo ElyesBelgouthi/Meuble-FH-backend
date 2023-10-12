@@ -13,6 +13,7 @@ import {
   NotFoundException,
   UploadedFiles,
   Query,
+  UseGuards,
 } from '@nestjs/common';
 import { ItemService } from './item.service';
 import { CreateItemDto } from './dto/create-item.dto';
@@ -26,6 +27,7 @@ import * as pathLib from 'path';
 import * as fs from 'fs';
 import { UpdateColorDto } from './dto/update-color.dto';
 import { PhotoModel } from './models/photo.model';
+import { AuthGuard } from '@nestjs/passport';
 
 @Controller('api/v1')
 export class ItemController {
@@ -38,6 +40,7 @@ export class ItemController {
    *
    */
   @Post('item')
+  @UseGuards(AuthGuard())
   @UseInterceptors(FilesInterceptor('photos', 5, saveImageToStorage))
   async createItem(
     @UploadedFiles() photos: Array<Express.Multer.File>,
@@ -57,6 +60,7 @@ export class ItemController {
   }
 
   @Post('color')
+  @UseGuards(AuthGuard())
   @UseInterceptors(FileInterceptor('img', saveImageToStorage))
   async createColor(
     @UploadedFile() img: Express.Multer.File,
@@ -128,6 +132,7 @@ export class ItemController {
    */
 
   @Patch('item/:id')
+  @UseGuards(AuthGuard())
   @UseInterceptors(FilesInterceptor('photos', 5, saveImageToStorage))
   async updateItem(
     @Param('id') id: number,
@@ -146,6 +151,7 @@ export class ItemController {
   }
 
   @Patch('color/:id')
+  @UseGuards(AuthGuard())
   @UseInterceptors(FileInterceptor('img', saveImageToStorage))
   updateColor(
     @UploadedFile() img: Express.Multer.File,
@@ -163,11 +169,13 @@ export class ItemController {
    */
 
   @Delete('item/:id')
+  @UseGuards(AuthGuard())
   removeItem(@Param('id') id: number) {
     return this.itemService.removeItem(id);
   }
 
   @Delete('color/:id')
+  @UseGuards(AuthGuard())
   removeColor(@Param('id') id: number) {
     this.itemService.removeColor(id);
   }
