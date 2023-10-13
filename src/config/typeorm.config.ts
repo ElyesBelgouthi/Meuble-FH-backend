@@ -9,11 +9,11 @@ import { Order } from 'src/order/entities/order.entity';
 
 export const typeOrmConfig: TypeOrmModuleOptions = {
   type: 'postgres',
-  host: 'localhost',
-  port: 1919,
-  username: 'postgres',
-  password: 'admin',
-  database: 'Meuble-FH-DB',
+  host: process.env.PGHOST,
+  port: parseInt(process.env.PGPORT),
+  username: process.env.PGUSER,
+  password: process.env.PGPASSWORD,
+  database: process.env.PGDATABASE,
   entities: [Item, Photo, Dimension, Color, User, Order, OrderItem],
   synchronize: true,
 };

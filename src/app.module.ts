@@ -7,6 +7,7 @@ import { typeOrmConfig } from './config/typeorm.config';
 import { AuthModule } from './auth/auth.module';
 import { OrderModule } from './order/order.module';
 import { MailerModule } from '@nestjs-modules/mailer';
+import { ConfigModule } from '@nestjs/config';
 
 @Module({
   imports: [
@@ -27,6 +28,7 @@ import { MailerModule } from '@nestjs-modules/mailer';
         from: '"Meuble FH" <meuble.fh.service@gmail.com>',
       },
     }),
+    ConfigModule.forRoot(),
   ],
   controllers: [AppController],
   providers: [AppService],
